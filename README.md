@@ -1,11 +1,13 @@
 # QuellGTA
 为GTAOL设计的，集多人联机同时崩溃进程、断网和自动自动卡单功能的软件。
+<p></p>
 常用链接：
-<a href="https://www.mageangela.cn/">前往我的主页</a>
-<a href="https://www.mageangela.cn/QuellGTA/">前往QuellGTA官网</a>
-<a href="https://zhaoshiqi.lanzouq.com/s/QuellGTA">前往蓝奏云下载</a>
-<a href="https://www.mageangela.cn/tools/QuellGTA-Notion.html">查看图文版使用教程</a>
-<a href="https://www.bilibili.com/video/BV1Bb421n7dk/">查看视频版联机教程</a>
+<p></p>
+<a href="https://www.mageangela.cn/">前往我的主页</a><p></p>
+<a href="https://www.mageangela.cn/QuellGTA/">前往QuellGTA官网</a><p></p>
+<a href="https://zhaoshiqi.lanzouq.com/s/QuellGTA">前往蓝奏云下载</a><p></p>
+<a href="https://www.mageangela.cn/tools/QuellGTA-Notion.html">查看图文版使用教程</a><p></p>
+<a href="https://www.bilibili.com/video/BV1Bb421n7dk/">查看视频版联机教程</a><p></p>
 
 <p></p>
 <img src="https://www.mageangela.cn/QuellGTA/scr/download.gif">
