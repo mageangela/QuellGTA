@@ -1,2 +1,3 @@
 # QuellGTA
 为GTAOL设计的，集多人联机同时崩溃进程、断网和自动自动卡单功能的软件。
+<img src="[./scr/download.gif](https://www.mageangela.cn/QuellGTA/scr/download.gif)">
