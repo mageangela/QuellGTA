@@ -1,0 +1,274 @@
+﻿using GTAFingerprinterCore.Configurations;
+using GTAFingerprinterCore.Extensions;
+using GTAFingerprinterCore.Implementions;
+using GTAFingerprinterCore.Interfaces;
+using GTAFingerprinterCore.Shared;
+using Microsoft.WindowsAPICodePack.Dialogs;
+using PropertyChanged;
+using Stylet;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Interop;
+using System.Windows.Media.Imaging;
+
+namespace GTAFingerprinterCore.Pages
+{
+    [AddINotifyPropertyChangedInterface]
+    public class RootViewModel : Screen
+    {
+        public AppConfig AppConfig { get; private set; }
+        public BitmapImage Main { get; private set; }
+        public IList<BitmapImage> Subs { get; private set; }
+        public ObservableCollection<string> OperationHistories { get; } = new ObservableCollection<string>();
+        public IList<Keys> Keys { get; } = Enum.GetValues(typeof(Keys)).Cast<Keys>().ToList();
+        public IKeyboard Keyboard { get; }
+        public IMouse Mouse { get; }
+        public int TabIndex { get; set; }
+
+        private readonly IDiamondFingerprinter _diamondFingerprinter;
+        private readonly IPericoFingerprinter _pericoFingerprinter;
+        private readonly IWindowManager _windowManager;
+        private IntPtr _handle;
+        private bool _processing = false;
+        private readonly object _processingLockObj = new object();
+        private bool _continuouslyClicking = false;
+        private readonly object _continuouslyClickingLockObj = new object();
+        private System.Timers.Timer _continuouslyClickingTimer;
+
+        public RootViewModel(AppConfig appConfig, IDiamondFingerprinter diamondFingerprinter, IWindowManager windowManager, IKeyboard keyboard, IMouse mouse, IPericoFingerprinter pericoFingerprinter)
+        {
+            AppConfig = appConfig;
+            _diamondFingerprinter = diamondFingerprinter;
+            _windowManager = windowManager;
+            Keyboard = keyboard;
+            Mouse = mouse;
+            _pericoFingerprinter = pericoFingerprinter;
+        }
+
+        protected override void OnViewLoaded()
+        {
+            base.OnViewLoaded();
+            _handle = new WindowInteropHelper(View as Window).Handle;
+        }
+        public async void Test()
+        {
+
+            var ofd = new CommonOpenFileDialog();
+            if (ofd.ShowDialog() == CommonFileDialogResult.Ok)
+            {
+                if (TabIndex == 0)
+                {
+                    var img = new Bitmap(System.Drawing.Image.FromFile(ofd.FileName));
+                    img = await (_diamondFingerprinter as Fingerprinter).ResizeAsync(img);
+                    AppendHistory("截图成功");
+                    var main = await _diamondFingerprinter.CutBigAsync(img, AppConfig.Diamond.MainImg);
+                    AppendHistory("裁剪大指纹成功");
+                    var subs = await _diamondFingerprinter.CutSubsAsync(img, AppConfig.Diamond.SubImg);
+                    AppendHistory("裁剪小指纹成功");
+                    Main = main.ToBitmapImage();
+                    Subs = subs.Select(x => x.ToBitmapImage()).ToList();
+                    var corrects = await _diamondFingerprinter.RecognizeAsync(main, subs, AppConfig.Similarity);
+                    if (corrects == null)
+                    {
+                        AppendHistory($"未识别到结果");
+                        return;
+                    }
+                    AppendHistory($"识别结束，结果为{string.Join(",", corrects)}");
+                    main.Dispose();
+                    foreach (var sub in subs)
+                    {
+                        sub.Dispose();
+                    }
+                }
+                else if (TabIndex == 1)
+                {
+                    var img = new Bitmap(System.Drawing.Image.FromFile(ofd.FileName));
+                    img = await (_diamondFingerprinter as Fingerprinter).ResizeAsync(img);
+                    AppendHistory("截图成功");
+                    var main = await _pericoFingerprinter.CutBigAsync(img, AppConfig.Perico.MainImg);
+                    AppendHistory("裁剪大指纹成功");
+                    var subs = await _pericoFingerprinter.CutSubsAsync(img, AppConfig.Perico.SubImg);
+                    AppendHistory("裁剪小指纹成功");
+                    Main = main.ToBitmapImage();
+                    Subs = subs.Select(x => x.ToBitmapImage()).ToList();
+                    var corrects = await _pericoFingerprinter.RecognizeAsync(main, subs, AppConfig.Similarity);
+                    if (corrects == null)
+                    {
+                        AppendHistory($"未识别到结果");
+                        return;
+                    }
+                    AppendHistory($"识别结束，结果为{string.Join(",", corrects)}");
+                    main.Dispose();
+                    foreach (var sub in subs)
+                    {
+                        sub.Dispose();
+                    }
+                }
+
+            }
+        }
+
+        public async void Test2()
+        {
+            var ofd = new CommonOpenFileDialog();
+            ofd.IsFolderPicker = true;
+            if (ofd.ShowDialog() == CommonFileDialogResult.Ok)
+            {
+                var dir = new DirectoryInfo(ofd.FileName);
+                var saveDir = "Perico";
+                if (!Directory.Exists(saveDir))
+                {
+                    Directory.CreateDirectory(saveDir);
+                }
+                var children = dir.GetDirectories();
+                foreach (var child in children)
+                {
+                    var files = child.GetFiles();
+                    var first = System.Drawing.Image.FromFile(files[0].FullName);
+                    var bigSrc = new Bitmap(first);
+                    first.Dispose();
+                    var big = await _pericoFingerprinter.CutBigAsync(bigSrc, AppConfig.Perico.MainImg);
+                    bigSrc.Dispose();
+                    big.Save(Path.Combine(saveDir, $"{child.Name}.png"), System.Drawing.Imaging.ImageFormat.Jpeg);
+                    big.Dispose();
+                    int i = 1;
+                    foreach (var file in files)
+                    {
+                        var src = System.Drawing.Image.FromFile(file.FullName);
+                        var img = new Bitmap(src);
+                        src.Dispose();
+                        var subs = await _pericoFingerprinter.CutSubsAsync(img, AppConfig.Perico.SubImg);
+                        subs[0].Save(Path.Combine(saveDir, $"{child.Name}.{i}.png"), System.Drawing.Imaging.ImageFormat.Png);
+                        foreach (var sub in subs)
+                        {
+                            sub.Dispose();
+                        }
+                        img.Dispose();
+                        i++;
+                    }
+                }
+            }
+        }
+        public void SaveConfig()
+        {
+            try
+            {
+                AppConfig.SaveConfig(Bootstrapper.configFilePath);
+            }
+            catch (Exception e)
+            {
+                _windowManager.ShowMessageBox($"保存配置失败\n{e.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public void RecognizeKeyChanged(object sender, SelectionChangedEventArgs e)
+        {
+            HotKeyChanged(nameof(AppConfig.RecognizeKey), AppConfig.RecognizeKey, Recognize);
+        }
+
+
+
+        private void HotKeyChanged(string name, Keys key, Action<HotKey> action)
+        {
+            try
+            {
+                if (!Keyboard.HotKeys.ContainsKey(name))
+                {
+                    var hotkey = new HotKey(key, _handle);
+                    hotkey.HotKeyPressed += action;
+                    Keyboard.HotKeys[name] = hotkey;
+                }
+                else
+                {
+                    Keyboard.HotKeys[name].Key = key;
+                }
+            }
+            catch (Exception e)
+            {
+                _windowManager.ShowErrorMessageBox(e.Message);
+            }
+        }
+
+        private void AppendHistory(string message)
+        {
+            if (OperationHistories.Count > 10)
+            {
+                OperationHistories.Remove(OperationHistories.Last());
+            }
+            OperationHistories.Insert(0, $"{DateTime.Now:HH:mm:ss} {message}");
+        }
+
+        private async void Recognize(HotKey k)
+        {
+            if (_processing)
+            {
+                return;
+            }
+            try
+            {
+                lock (_processingLockObj)
+                {
+                    _processing = true;
+                }
+                IFingerprinter fingerprinter;
+                ImgConfig mainConfig;
+                ImgConfig subConfig;
+                if (TabIndex == 0)
+                {
+                    fingerprinter = _diamondFingerprinter;
+                    mainConfig = AppConfig.Diamond.MainImg;
+                    subConfig = AppConfig.Diamond.SubImg;
+                }
+                else if (TabIndex == 1)
+                {
+                    fingerprinter = _pericoFingerprinter;
+                    mainConfig = AppConfig.Perico.MainImg;
+                    subConfig = AppConfig.Perico.SubImg;
+                }
+                else
+                {
+                    return;
+                }
+                var img = await fingerprinter.CaptureGameScreenAsync(AppConfig.IsFullScreen);
+                AppendHistory("截图成功");
+                var main = await fingerprinter.CutBigAsync(img, mainConfig);
+                AppendHistory("裁剪大指纹成功");
+                var subs = await fingerprinter.CutSubsAsync(img, subConfig);
+                AppendHistory("裁剪小指纹成功");
+                Main = main.ToBitmapImage();
+                Subs = subs.Select(x => x.ToBitmapImage()).ToList();
+                var corrects = await fingerprinter.RecognizeAsync(main, subs, AppConfig.Similarity);
+                if (corrects == null)
+                {
+                    AppendHistory($"未识别到结果");
+                    return;
+                }
+                AppendHistory($"识别结束，结果为{string.Join(",", corrects)}");
+                await fingerprinter.AutoPressKeysAsync(corrects, AppConfig.KeyPressDelay);
+                AppendHistory("按键成功");
+                main.Dispose();
+                foreach (var sub in subs)
+                {
+                    sub.Dispose();
+                }
+            }
+            catch (Exception e)
+            {
+                _windowManager.ShowErrorMessageBox(e.Message);
+            }
+            finally
+            {
+                lock (_processingLockObj)
+                {
+                    _processing = false;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,114 @@
+﻿<mah:MetroWindow x:Class="GTAFingerprinterCore.Pages.RootView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+        xmlns:s="https://github.com/canton7/Stylet"
+        xmlns:local="clr-namespace:GTAFingerprinterCore.Pages"
+        mc:Ignorable="d"
+        Title="GTA Fingerprinter" Height="550" Width="261" ResizeMode="CanMinimize" Icon="{StaticResource icon}" TitleCharacterCasing="Normal" SnapsToDevicePixels="True" ShowInTaskbar="False" Visibility="Hidden"  WindowState="Minimized" >
+    <Grid Margin="2">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="200" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid Grid.Row="1" Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="30" />
+                <RowDefinition Height="30" />
+                <RowDefinition Height="30" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50" />
+                <ColumnDefinition Width="40" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="按键延迟" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AppConfig.KeyPressDelay,StringFormat={}{0}ms}" />
+            <Slider Grid.Row="1" Grid.Column="2" Value="{Binding AppConfig.KeyPressDelay}" Maximum="100" Minimum="20" SmallChange="1" LargeChange="10" />
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="准确率" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AppConfig.Similarity,StringFormat={}{0:N3}}" />
+            <Slider Grid.Row="2" Grid.Column="2" Value="{Binding AppConfig.Similarity}" Maximum="0.95" Minimum="0.35" SmallChange="0.01" LargeChange="0.1" />
+
+            <CheckBox Grid.Row="3" Grid.Column="0" IsChecked="{Binding AppConfig.IsFullScreen}" Content="全屏" />
+            <Button Grid.Row="3" Grid.Column="2" Margin="2" Content="保存配置" Command="{s:Action SaveConfig}" />
+
+            <ListBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding OperationHistories}"/>
+
+            <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Height="auto">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="90" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="识别键"/>
+                <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding Keys}" SelectedItem="{Binding AppConfig.RecognizeKey}" SelectionChanged="{s:Action RecognizeKeyChanged}" />
+            </Grid>
+        </Grid>
+        <TabControl SelectedIndex="{Binding TabIndex}" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3">
+            <TabItem Header="赌场">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="155" />
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Row="0" Stretch="Fill" Grid.Column="2" Grid.RowSpan="4" Source="{Binding Main}" />
+                    <Image Grid.Row="0" Stretch="Fill" Grid.Column="0" Source="{Binding Subs[0]}" />
+                    <Image Grid.Row="0" Stretch="Fill" Grid.Column="1" Source="{Binding Subs[1]}" />
+                    <Image Grid.Row="1" Stretch="Fill" Grid.Column="0" Source="{Binding Subs[2]}" />
+                    <Image Grid.Row="1" Stretch="Fill" Grid.Column="1" Source="{Binding Subs[3]}" />
+                    <Image Grid.Row="2" Stretch="Fill" Grid.Column="0" Source="{Binding Subs[4]}" />
+                    <Image Grid.Row="2" Stretch="Fill" Grid.Column="1" Source="{Binding Subs[5]}" />
+                    <Image Grid.Row="3" Stretch="Fill" Grid.Column="0" Source="{Binding Subs[6]}" />
+                    <Image Grid.Row="3" Stretch="Fill" Grid.Column="1" Source="{Binding Subs[7]}" />
+                </Grid>
+            </TabItem>
+            <TabItem Header="佩里科岛">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="155" />
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Row="0" Grid.Column="2" Grid.RowSpan="8" Stretch="Fill" Source="{Binding Main}" />
+                    <Image Grid.Row="0"  Stretch="Fill" Source="{Binding Subs[0]}" />
+                    <Image Grid.Row="1"  Stretch="Fill" Source="{Binding Subs[1]}" />
+                    <Image Grid.Row="2"  Stretch="Fill" Source="{Binding Subs[2]}" />
+                    <Image Grid.Row="3"  Stretch="Fill" Source="{Binding Subs[3]}" />
+                    <Image Grid.Row="4"  Stretch="Fill" Source="{Binding Subs[4]}" />
+                    <Image Grid.Row="5"  Stretch="Fill" Source="{Binding Subs[5]}" />
+                    <Image Grid.Row="6"  Stretch="Fill" Source="{Binding Subs[6]}" />
+                    <Image Grid.Row="7"  Stretch="Fill" Source="{Binding Subs[7]}" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+    </Grid>
+</mah:MetroWindow>
