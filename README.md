@@ -26,7 +26,7 @@ yum install -y money（捐赠了新的公益服）<p></p>
 <p></p>
 <a href="https://www.mageangela.cn/">前往我的主页</a><p></p>
 <a href="https://www.mageangela.cn/QuellGTA/">前往QuellGTA官网</a><p></p>
-<a href="https://zhaoshiqi.lanzouq.com/s/QuellGTA">前往蓝奏云下载</a><p></p>
+<a href="https://lanzouq.com/s/QuellGTA">前往蓝奏云下载</a><p></p>
 <a href="https://www.mageangela.cn/tools/QuellGTA-Notion.html">查看图文版使用教程</a><p></p>
 <a href="https://www.bilibili.com/video/BV1Bb421n7dk/">查看视频版联机教程</a><p></p>
 <a href="https://www.mageangela.cn/QuellGTA/scr/mmsp_qr.gif">扫描赞赏作者</a><p></p>
