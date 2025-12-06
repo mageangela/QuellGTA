@@ -66,5 +66,6 @@ TsukCy（协助测试和研究公寓人道实验室“处女”红）<p></p>
 童年一夢(主持了QuellGTA软件交流群)<p></p>
 Meridec残月（共同研究了bin文件跳过前置的方法）<p></p>
 yum install -y money（捐赠了新的公益服）<p></p>
+M3351AN（提供了[QuellGTA_WFP](https://github.com/mageangela/QuellGTA_WFP)分支）<p></p>
 <p>·</p>
 ----不要忘了，感谢为了公益服的运行，捐款的雷锋们！<p></p>
