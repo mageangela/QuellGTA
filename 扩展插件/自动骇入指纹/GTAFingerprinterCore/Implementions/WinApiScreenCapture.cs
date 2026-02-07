@@ -1,7 +1,10 @@
-﻿using GTAFingerprinterCore.Interfaces;
+﻿using ControlzEx.Standard;
+using GTAFingerprinterCore.Interfaces;
+using GTAFingerprinterCore.Pages;
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using Windows.ApplicationModel.Background;
 
 namespace GTAFingerprinterCore.Implementions
 {
@@ -46,7 +49,7 @@ namespace GTAFingerprinterCore.Implementions
         private static extern IntPtr GetDC(IntPtr ptr);
 
         [DllImport("user32.dll", EntryPoint = "GetWindowDC")]
-        private static extern IntPtr GetWindowDC(Int32 ptr);
+        private static extern IntPtr GetWindowDC(IntPtr ptr);
 
         [DllImport("user32.dll", EntryPoint = "ReleaseDC")]
         private static extern IntPtr ReleaseDC(IntPtr hWnd, IntPtr hDc);
@@ -60,24 +63,26 @@ namespace GTAFingerprinterCore.Implementions
         [DllImport("User32.dll", EntryPoint = "GetClientRect")]
         private static extern bool GetClientRect(IntPtr hWnd, out RECT rect);
 
+        [DllImport("User32.dll", EntryPoint = "ClientToScreen")]
+        private static extern bool ClientToScreen(IntPtr hWnd, out RECT rect);
+
         [DllImport("user32.dll")]
         private static extern IntPtr GetDesktopWindow();
 
-        private static Bitmap CaptureWindow(IntPtr hWnd)
+        private static Bitmap CaptureDesktopWindow()
         {
+            var hWnd = GetDesktopWindow();
             var hDC = GetDC(hWnd);
             var hMemDC = CreateCompatibleDC(hDC);
-            GetClientRect(hWnd, out RECT rECT);
-            SIZE size;
-            size.cx = rECT.right - rECT.left;
-            size.cy = rECT.bottom - rECT.top;
+            GetClientRect(hWnd, out RECT rect);
 
-            var m_HBitmap = CreateCompatibleBitmap(hDC, size.cx, size.cy);
+            var width = rect.right - rect.left;
+            var height = rect.bottom - rect.top;
+            var m_HBitmap = CreateCompatibleBitmap(hDC, width, height);
             if (m_HBitmap != IntPtr.Zero)
             {
                 var hOld = SelectObject(hMemDC, m_HBitmap);
-
-                BitBlt(hMemDC, 0, 0, size.cx, size.cy, hDC, 0, 0, SRCCOPY | CAPTUREBLT);
+                BitBlt(hMemDC, 0, 0, width, height, hDC, 0, 0, SRCCOPY | CAPTUREBLT);
                 SelectObject(hMemDC, hOld);
                 DeleteDC(hMemDC);
                 ReleaseDC(hWnd, hDC);
@@ -90,7 +95,7 @@ namespace GTAFingerprinterCore.Implementions
 
         public Bitmap CaptureScreen()
         {
-            return CaptureWindow(GetDesktopWindow());
+            return CaptureDesktopWindow();
         }
 
         public Bitmap CaptureWindow(string title)
@@ -100,7 +105,24 @@ namespace GTAFingerprinterCore.Implementions
             {
                 throw new InvalidOperationException("指定截图的窗口不存在");
             }
-            return CaptureWindow(hWnd);
+            var desktopBitmap = CaptureDesktopWindow();
+
+            GetClientRect(hWnd, out RECT rect);
+            
+            var width = rect.right - rect.left;
+            var height = rect.bottom - rect.top;
+            var border = width - height * 16 / 9; // 黑边
+            var adjWidth = width - border;
+
+            var bitmap = new Bitmap(adjWidth, height);
+            ClientToScreen(hWnd, out RECT screenPos);
+            using (Graphics g = Graphics.FromImage(bitmap))
+            {
+                g.DrawImage(desktopBitmap, new Rectangle(0, 0, bitmap.Width, height),
+                      new Rectangle(screenPos.left + border / 2, screenPos.top, adjWidth, height),
+                      GraphicsUnit.Pixel);
+            }
+            return bitmap;
         }
     }
 }
