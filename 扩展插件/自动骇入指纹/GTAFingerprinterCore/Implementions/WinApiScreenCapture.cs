@@ -1,10 +1,7 @@
-﻿using ControlzEx.Standard;
-using GTAFingerprinterCore.Interfaces;
-using GTAFingerprinterCore.Pages;
+﻿using GTAFingerprinterCore.Interfaces;
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
-using Windows.ApplicationModel.Background;
 
 namespace GTAFingerprinterCore.Implementions
 {
