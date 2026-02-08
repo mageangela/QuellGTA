@@ -6,7 +6,7 @@
 		<UseWPF>true</UseWPF>
 		<ApplicationIcon>icon.ico</ApplicationIcon>
 		<SignAssembly>false</SignAssembly>
-		<Version>4.0.2.0</Version>
+		<Version>4.0.2.1</Version>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<Authors>fish,MageAngela</Authors>
 		<Company>fish</Company>

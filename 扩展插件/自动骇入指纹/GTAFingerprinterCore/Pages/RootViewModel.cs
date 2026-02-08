@@ -67,11 +67,13 @@ namespace GTAFingerprinterCore.Pages
                 {
                     case "quelldiamond":
                         TabIndex = 0;
-
+                        // 初始化热键
+                        InitializeHotKey("RecognizeKey", AppConfig.RecognizeKey, Recognize);
                         break;
                     case "quellperico":
                         TabIndex = 1;
-
+                        // 初始化热键
+                        InitializeHotKey("RecognizeKey", AppConfig.RecognizeKey, Recognize);
                         break;
                     default:
                         _windowManager.ShowMessageBox($"您没有指定应该运行的指纹模式，请使用QuellGTA或者指纹插件安装器启动。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -85,6 +87,25 @@ namespace GTAFingerprinterCore.Pages
                 Application.Current.Shutdown();
             }
         }
+
+        // 新增：初始化热键方法
+        private void InitializeHotKey(string name, Keys key, Action<HotKey> action)
+        {
+            try
+            {
+                if (!Keyboard.HotKeys.ContainsKey(name))
+                {
+                    var hotkey = new HotKey(key, _handle);
+                    hotkey.HotKeyReleased += action; // 改为HotKeyReleased
+                    Keyboard.HotKeys[name] = hotkey;
+                }
+            }
+            catch (Exception e)
+            {
+                _windowManager.ShowErrorMessageBox($"初始化热键失败: {e.Message}");
+            }
+        }
+
         public void SaveConfig()
         {
             try
@@ -106,30 +127,35 @@ namespace GTAFingerprinterCore.Pages
         {
             try
             {
-                if (!Keyboard.HotKeys.ContainsKey(name))
+                if (Keyboard.HotKeys.ContainsKey(name))
                 {
-                    var hotkey = new HotKey(key, _handle);
-                    hotkey.HotKeyPressed += action;
-                    Keyboard.HotKeys[name] = hotkey;
+                    // 先注销旧热键
+                    Keyboard.HotKeys[name].Dispose();
+                    Keyboard.HotKeys.Remove(name);
                 }
-                else
-                {
-                    Keyboard.HotKeys[name].Key = key;
-                }
+
+                // 创建新热键
+                var hotkey = new HotKey(key, _handle);
+                hotkey.HotKeyReleased += action; // 改为HotKeyReleased
+                Keyboard.HotKeys[name] = hotkey;
             }
             catch (Exception e)
             {
-                _windowManager.ShowErrorMessageBox(e.Message);
+                _windowManager.ShowErrorMessageBox($"热键更改失败: {e.Message}");
             }
         }
 
         private void AppendHistory(string message)
         {
-            if (OperationHistories.Count > 10)
+            // 确保在UI线程上操作
+            Execute.OnUIThread(() =>
             {
-                OperationHistories.Remove(OperationHistories.Last());
-            }
-            OperationHistories.Insert(0, $"{DateTime.Now:HH:mm:ss} {message}");
+                if (OperationHistories.Count > 10)
+                {
+                    OperationHistories.Remove(OperationHistories.Last());
+                }
+                OperationHistories.Insert(0, $"{DateTime.Now:HH:mm:ss} {message}");
+            });
         }
 
         private async void Recognize(HotKey k)
@@ -196,6 +222,22 @@ namespace GTAFingerprinterCore.Pages
                 {
                     _processing = false;
                 }
+            }
+        }
+
+        // 新增：在ViewModel销毁时清理热键
+        protected override void OnClose()
+        {
+            base.OnClose();
+
+            // 清理所有热键
+            if (Keyboard.HotKeys != null)
+            {
+                foreach (var hotkey in Keyboard.HotKeys.Values)
+                {
+                    hotkey.Dispose();
+                }
+                Keyboard.HotKeys.Clear();
             }
         }
     }
