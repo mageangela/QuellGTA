@@ -1,7 +1,8 @@
 {
   "profiles": {
     "GTAFingerprinterCore": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "quelldiamond"
     }
   }
 }

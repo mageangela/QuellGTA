@@ -9,12 +9,14 @@ using Stylet;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 
@@ -38,8 +40,6 @@ namespace GTAFingerprinterCore.Pages
         private IntPtr _handle;
         private bool _processing = false;
         private readonly object _processingLockObj = new object();
-        private readonly object _continuouslyClickingLockObj = new object();
-
 
         public RootViewModel(AppConfig appConfig, IDiamondFingerprinter diamondFingerprinter, IWindowManager windowManager, IKeyboard keyboard, IMouse mouse, IPericoFingerprinter pericoFingerprinter)
         {
@@ -55,6 +55,7 @@ namespace GTAFingerprinterCore.Pages
         {
             base.OnViewLoaded();
             _handle = new WindowInteropHelper(View as Window).Handle;
+
             // 获取命令行参数
             string[] args = Environment.GetCommandLineArgs();
 
@@ -67,28 +68,26 @@ namespace GTAFingerprinterCore.Pages
                 {
                     case "quelldiamond":
                         TabIndex = 0;
-                        // 初始化热键
                         InitializeHotKey("RecognizeKey", AppConfig.RecognizeKey, Recognize);
                         break;
                     case "quellperico":
                         TabIndex = 1;
-                        // 初始化热键
                         InitializeHotKey("RecognizeKey", AppConfig.RecognizeKey, Recognize);
                         break;
                     default:
-                        _windowManager.ShowMessageBox($"您没有指定应该运行的指纹模式，请使用QuellGTA或者指纹插件安装器启动。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                        // 因为界面隐藏，我们直接写入日志
+                        File.AppendAllText("error.log", $"{DateTime.Now}: 无效的命令行参数: {command}\n");
                         Application.Current.Shutdown();
                         break;
                 }
             }
             else
             {
-                _windowManager.ShowMessageBox($"您没有指定应该运行的指纹模式，请使用QuellGTA或者指纹插件安装器启动。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                File.AppendAllText("error.log", $"{DateTime.Now}: 缺少命令行参数\n");
                 Application.Current.Shutdown();
             }
         }
 
-        // 新增：初始化热键方法
         private void InitializeHotKey(string name, Keys key, Action<HotKey> action)
         {
             try
@@ -96,13 +95,15 @@ namespace GTAFingerprinterCore.Pages
                 if (!Keyboard.HotKeys.ContainsKey(name))
                 {
                     var hotkey = new HotKey(key, _handle);
-                    hotkey.HotKeyReleased += action; // 改为HotKeyReleased
+                    hotkey.HotKeyReleased += action;
                     Keyboard.HotKeys[name] = hotkey;
+                    AppendHistory($"热键 {key} 注册成功");
                 }
             }
             catch (Exception e)
             {
-                _windowManager.ShowErrorMessageBox($"初始化热键失败: {e.Message}");
+                AppendHistory($"热键注册失败: {e.Message}");
+                File.AppendAllText("hotkey_error.log", $"{DateTime.Now}: 热键注册失败 - {e}\n");
             }
         }
 
@@ -114,107 +115,115 @@ namespace GTAFingerprinterCore.Pages
             }
             catch (Exception e)
             {
-                _windowManager.ShowMessageBox($"保存配置失败\n{e.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                File.AppendAllText("error.log", $"{DateTime.Now}: 保存配置失败 - {e}\n");
             }
         }
 
         public void RecognizeKeyChanged(object sender, SelectionChangedEventArgs e)
         {
-            HotKeyChanged(nameof(AppConfig.RecognizeKey), AppConfig.RecognizeKey, Recognize);
-        }
-
-        private void HotKeyChanged(string name, Keys key, Action<HotKey> action)
-        {
             try
             {
-                if (Keyboard.HotKeys.ContainsKey(name))
+                if (Keyboard.HotKeys.ContainsKey("RecognizeKey"))
                 {
-                    // 先注销旧热键
-                    Keyboard.HotKeys[name].Dispose();
-                    Keyboard.HotKeys.Remove(name);
+                    Keyboard.HotKeys["RecognizeKey"].Dispose();
+                    Keyboard.HotKeys.Remove("RecognizeKey");
                 }
 
-                // 创建新热键
-                var hotkey = new HotKey(key, _handle);
-                hotkey.HotKeyReleased += action; // 改为HotKeyReleased
-                Keyboard.HotKeys[name] = hotkey;
+                InitializeHotKey("RecognizeKey", AppConfig.RecognizeKey, Recognize);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                _windowManager.ShowErrorMessageBox($"热键更改失败: {e.Message}");
+                AppendHistory($"热键更改失败: {ex.Message}");
             }
         }
 
         private void AppendHistory(string message)
         {
-            // 确保在UI线程上操作
-            Execute.OnUIThread(() =>
-            {
-                if (OperationHistories.Count > 10)
-                {
-                    OperationHistories.Remove(OperationHistories.Last());
-                }
-                OperationHistories.Insert(0, $"{DateTime.Now:HH:mm:ss} {message}");
-            });
+            Debug.WriteLine(message);
         }
 
         private async void Recognize(HotKey k)
         {
+            AppendHistory("热键触发，开始识别...");
+
             if (_processing)
             {
+                AppendHistory("正在处理中，跳过本次操作");
                 return;
             }
+
             try
             {
                 lock (_processingLockObj)
                 {
                     _processing = true;
                 }
+
                 IFingerprinter fingerprinter;
                 ImgConfig mainConfig;
                 ImgConfig subConfig;
+
                 if (TabIndex == 0)
                 {
                     fingerprinter = _diamondFingerprinter;
                     mainConfig = AppConfig.Diamond.MainImg;
                     subConfig = AppConfig.Diamond.SubImg;
+                    AppendHistory("使用钻石赌场指纹识别器");
                 }
                 else if (TabIndex == 1)
                 {
                     fingerprinter = _pericoFingerprinter;
                     mainConfig = AppConfig.Perico.MainImg;
                     subConfig = AppConfig.Perico.SubImg;
+                    AppendHistory("使用佩里科岛指纹识别器");
                 }
                 else
                 {
                     return;
                 }
+
+                // 捕获屏幕
+                AppendHistory("正在截图...");
                 var img = await fingerprinter.CaptureGameScreenAsync(AppConfig.IsFullScreen);
-                AppendHistory("截图成功");
+
+                // 裁剪大指纹
+                AppendHistory("裁剪大指纹...");
                 var main = await fingerprinter.CutBigAsync(img, mainConfig);
-                AppendHistory("裁剪大指纹成功");
+
+                // 裁剪小指纹
+                AppendHistory("裁剪小指纹...");
                 var subs = await fingerprinter.CutSubsAsync(img, subConfig);
-                AppendHistory("裁剪小指纹成功");
-                Main = main.ToBitmapImage();
-                Subs = subs.Select(x => x.ToBitmapImage()).ToList();
+
+                // 识别
+                AppendHistory("开始识别...");
                 var corrects = await fingerprinter.RecognizeAsync(main, subs, AppConfig.Similarity);
+
                 if (corrects == null)
                 {
-                    AppendHistory($"未识别到结果");
+                    AppendHistory("未识别到有效结果");
                     return;
                 }
-                AppendHistory($"识别结束，结果为{string.Join(",", corrects)}");
+
+                AppendHistory($"识别结果: {string.Join(",", corrects)}");
+
+                // 自动按键
+                AppendHistory($"开始自动按键，延迟: {AppConfig.KeyPressDelay}ms");
                 await fingerprinter.AutoPressKeysAsync(corrects, AppConfig.KeyPressDelay);
-                AppendHistory("按键成功");
+                AppendHistory("按键完成");
+
+                // 清理资源
                 main.Dispose();
                 foreach (var sub in subs)
                 {
                     sub.Dispose();
                 }
+                img.Dispose();
+
             }
             catch (Exception e)
             {
-                _windowManager.ShowErrorMessageBox(e.Message);
+                AppendHistory($"识别过程中出错: {e.Message}");
+                File.AppendAllText("error.log", $"{DateTime.Now}: 识别错误 - {e}\n");
             }
             finally
             {
@@ -225,7 +234,6 @@ namespace GTAFingerprinterCore.Pages
             }
         }
 
-        // 新增：在ViewModel销毁时清理热键
         protected override void OnClose()
         {
             base.OnClose();
@@ -239,6 +247,8 @@ namespace GTAFingerprinterCore.Pages
                 }
                 Keyboard.HotKeys.Clear();
             }
+
+            AppendHistory("程序退出");
         }
     }
 }

@@ -37,7 +37,10 @@ namespace GTAFingerprinterCore.Implementions
                 var yPressCount = Math.Abs(deltaY);
                 await _keyboard.Press(deltaX >= 0 ? Keys.Right : Keys.Left, xPressCount, delay: delay);
                 await _keyboard.Press(deltaY >= 0 ? Keys.Down : Keys.Up, yPressCount, delay: delay);
-                await _keyboard.Press(Keys.Enter, delay: delay);
+
+                // 按下Enter键，使用1.2倍延迟
+                int enterDelay = (int)(delay * 1.2);
+                await _keyboard.Press(Keys.Enter, delay: enterDelay);
 
                 tmpX = x;
                 tmpY = y;
