@@ -12,7 +12,7 @@ namespace GTAFingerprinterCore.Configurations
         public bool IsFullScreen { get; set; } = false;
         public Keys RecognizeKey { get; set; } = Keys.F10;
         public int KeyPressDelay { get; set; } = 40;
-        public float Similarity { get; set; } = 0.825f;
+        public float Similarity { get; set; } = 0.85f;
 
         // 添加默认值初始化
         public DiamondConfig Diamond { get; set; } = new DiamondConfig();

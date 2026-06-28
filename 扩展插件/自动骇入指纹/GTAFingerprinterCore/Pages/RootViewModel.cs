@@ -94,14 +94,17 @@ namespace GTAFingerprinterCore.Pages
             {
                 if (!Keyboard.HotKeys.ContainsKey(name))
                 {
-                    var hotkey = new HotKey(key, _handle);
+                    Debug.WriteLine($"=== 开始注册热键: {name}, Key={key} ===");
+                    var hotkey = new HotKey(key);
                     hotkey.HotKeyReleased += action;
                     Keyboard.HotKeys[name] = hotkey;
                     AppendHistory($"热键 {key} 注册成功");
+                    Debug.WriteLine($"=== 热键注册完成 ===");
                 }
             }
             catch (Exception e)
             {
+                Debug.WriteLine($"热键注册异常: {e}");
                 AppendHistory($"热键注册失败: {e.Message}");
                 File.AppendAllText("hotkey_error.log", $"{DateTime.Now}: 热键注册失败 - {e}\n");
             }
