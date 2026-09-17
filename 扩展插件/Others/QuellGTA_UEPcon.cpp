@@ -9,6 +9,7 @@
 std::wstring g_pipeName;
 std::atomic<bool> g_running(true);
 std::atomic<bool> g_shouldExit(false);
+std::atomic<bool> g_heartbeatEnabled(false);
 HANDLE g_hPipe = INVALID_HANDLE_VALUE;
 
 // 从进程名获取进程ID和可执行文件路径
@@ -98,12 +99,8 @@ bool NotifyExistingGuardian() {
         return false;
     }
 
-    // 发送心跳消息
-    const char* msg = "PING";
-    DWORD written = 0;
-    BOOL result = WriteFile(hPipe, msg, 4, &written, NULL);
     CloseHandle(hPipe);
-    return result == TRUE;
+    return TRUE;
 }
 
 // 管道监听线程：接收心跳消息
@@ -136,12 +133,9 @@ void PipeServerThread() {
             char buffer[64] = { 0 };
             DWORD bytesRead = 0;
             if (ReadFile(hPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
-                // 收到心跳消息，重置计时器
-                // 通过全局原子变量通知主循环
-                // 这里用简单的方式：设置一个标志，由主循环处理
-                // 但为了简洁，我们用一个更直接的方式
                 extern std::atomic<ULONGLONG> g_lastHeartbeat;
                 g_lastHeartbeat = GetTickCount64();
+                g_heartbeatEnabled = true;   
             }
         }
 
@@ -171,7 +165,7 @@ int main() {
 
     // 检查是否已有守护进程在运行
     if (NotifyExistingGuardian()) {
-        // 已有守护进程，通知它重置计时器后退出
+        // 已有守护进程
         return 0;
     }
 
@@ -215,10 +209,10 @@ int main() {
             }
         }
 
-        // 检查心跳超时（5秒）
+        // 检查心跳超时（12秒）
         ULONGLONG now = GetTickCount64();
         ULONGLONG last = g_lastHeartbeat.load();
-        if (now - last >= 5000) {
+        if (g_heartbeatEnabled && now - last >= 12000) {
             // 超时，强制结束进程并重启
             KillProcess(pid);
 
@@ -232,6 +226,7 @@ int main() {
             if (fileAttr != INVALID_FILE_ATTRIBUTES && !(fileAttr & FILE_ATTRIBUTE_DIRECTORY)) {
                 if (StartTargetProcess(filePath, pid)) {
                     g_lastHeartbeat = GetTickCount64();
+                    g_heartbeatEnabled = false;   
                     std::this_thread::sleep_for(std::chrono::seconds(5));
                     continue;
                 }
